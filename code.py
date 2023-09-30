@@ -1,132 +1,110 @@
+import argparse
 import numpy as np
 import random
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import GCNConv
 
+# Define a simple GNN model
+class GNNModel(nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(GNNModel, self).__init__()
+        self.conv1 = GCNConv(input_dim, hidden_dim)
+        self.conv2 = GCNConv(hidden_dim, hidden_dim)
 
-# Initialize item embeddings ei using a retrieval function
-def retrieve_item_embeddings(item_id):
-    # Implementation of item embedding retrieval
-    # This function retrieves the initial item embedding e_i^in from a database
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.conv2(x, edge_index)
+        return x
+
+# Modify your retrieval functions to use GNN
+def retrieve_item_embeddings(item_id, gnn_model):
+    # Implementation of item embedding retrieval using GNN
+    # You will need to provide your graph data and convert it to PyTorch tensors
+    # For simplicity, I'm using random data here as an example.
+    graph_data = torch.randn(item_id.shape[0], input_dim)
+    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long)  # Replace with your actual edge_index
+    item_embedding = gnn_model(graph_data, edge_index)
     return item_embedding
 
-# Initialize user embeddings eu using a retrieval function
-def retrieve_user_embeddings(user_id):
-    # Implementation of user embedding retrieval
-    # This function retrieves the initial user embedding e_u^in from a database
+def retrieve_user_embeddings(user_id, gnn_model):
+    # Implementation of user embedding retrieval using GNN
+    # Similar to item embeddings, use your graph data and GNN model here.
+    # Replace the random data and edge_index with your actual data.
+    graph_data = torch.randn(user_id.shape[0], input_dim)
+    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long)  # Replace with your actual edge_index
+    user_embedding = gnn_model(graph_data, edge_index)
     return user_embedding
 
-# Initialize attribute embeddings ea using a retrieval function
-def retrieve_attribute_embeddings(attribute_id):
-    # Implementation of attribute embedding retrieval
-    # This function retrieves the initial attribute embedding e_a^in from a database
+def retrieve_attribute_embeddings(attribute_id, gnn_model):
+    # Implementation of attribute embedding retrieval using GNN
+    # Similar to item and user embeddings, use your graph data and GNN model here.
+    # Replace the random data and edge_index with your actual data.
+    graph_data = torch.randn(attribute_id.shape[0], input_dim)
+    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long)  # Replace with your actual edge_index
+    attribute_embedding = gnn_model(graph_data, edge_index)
     return attribute_embedding
-    
-# # Initialize item embeddings ei
-# item_embeddings = {}  # Dictionary to store item embeddings
-# # TODO: Initialize item embeddings ei using a retrieval function
 
-# # Initialize user embeddings eu
-# user_embeddings = {}  # Dictionary to store user embeddings
-# # TODO: Initialize user embeddings eu using a retrieval function
-
-# # Initialize attribute embeddings ea
-# attribute_embeddings = {}  # Dictionary to store attribute embeddings
-# # TODO: Initialize attribute embeddings ea using a retrieval function
-
-
-# MLP function for rating-aware representation zu,i
+# Define the MLP function for rating-aware representation zu,i
 def mlp(item_emb, rating_emb):
     concatenated_emb = np.concatenate((item_emb, rating_emb))
     return np.tanh(np.dot(concatenated_emb, mlp_weights) + mlp_bias)
 
-# Aggregation function for user-item interactions
+# Define the aggregation function for user-item interactions
 def aggregate_user_interactions(user_items, item_embeddings):
     attentions = []
     for item_id in user_items:
         item_emb = item_embeddings[item_id]
-        rating_emb = user_items[item_id]  # assuming rating-aware representation is provided
+        rating_emb = user_items[item_id]['rating_emb']  # Use the rating-aware representation
         attention = mlp(item_emb, rating_emb)
         attentions.append(attention)
     attentions = np.exp(attentions) / np.sum(np.exp(attentions))
     user_representation = np.dot(attentions, item_embeddings)
     return user_representation
 
-# Aggregation function for user-user social relations
+# Define the aggregation function for user-user social relations
 def aggregate_user_social_relations(friends, user_embeddings):
     attentions = []
     for friend_id in friends:
         friend_emb = user_embeddings[friend_id]
-        attention = mlp(friend_emb, user_embeddings[friend_id])  # assuming rating-aware representation is provided
+        attention = mlp(friend_emb, user_embeddings[friend_id])  # Use the rating-aware representation
         attentions.append(attention)
     attentions = np.exp(attentions) / np.sum(np.exp(attentions))
     user_representation = np.dot(attentions, user_embeddings)
     return user_representation
 
-# Aggregation function for attribute-item relations
+# Define the aggregation function for attribute-item relations
 def aggregate_attribute_items(attribute_items, item_embeddings):
     attentions = []
     for item_id in attribute_items:
         item_emb = item_embeddings[item_id]
-        attention = mlp(item_emb, item_embeddings[item_id])  # assuming rating-aware representation is provided
+        attention = mlp(item_emb, item_embeddings[item_id])  # Use the rating-aware representation
         attentions.append(attention)
     attentions = np.exp(attentions) / np.sum(np.exp(attentions))
     attribute_representation = np.dot(attentions, item_embeddings)
     return attribute_representation
 
-
-
-# Iterate over users to calculate user representations eu
-for user_id in user_interactions:
-    user_items = user_interactions[user_id]  # Dictionary of user-item interactions and ratings
-    user_friends = user_social_relations[user_id]  # List of user's social friends
-
-    user_item_representation = aggregate_user_interactions(user_items, item_embeddings)
-    user_social_representation = aggregate_user_social_relations(user_friends, user_embeddings)
-
-    # Assuming user ratings are available in user_items dictionary as y_ui
-    rating_emb = user_items[item_id]['rating_emb']  # Retrieve rating-aware representation
-    user_item_representation = mlp(user_item_representation, rating_emb)
-
-    user_embeddings[user_id] = user_item_representation
-
-
-
-# Iterate over items to calculate item representations ei
-for item_id in attribute_items:
-    attribute_items = attribute_items[item_id]  # List of items associated with the attribute
-
-    item_emb = retrieve_item_embeddings(item_id)  # Retrieve initial item embedding
-    rating_emb = item_ratings[item_id]['rating_emb']  # Retrieve rating-aware representation
-    item_representation = mlp(item_emb, rating_emb)
-
-    item_embeddings[item_id] = item_representation
-
-# Iterate over attributes to calculate attribute representations ea
-for attribute_id in attribute_items:
-    attribute_items = attribute_items[attribute_id]  # List of items associated with the attribute
-
-    attribute_representation = aggregate_attribute_items(attribute_items, item_embeddings)
-    attribute_embeddings[attribute_id] = attribute_representation
-
-# Access the calculated offline user representation eu, item representation ei, and attribute representation ea
-offline_user_representation = user_embeddings[user_id]
-offline_item_representation = item_embeddings[item_id]
-offline_attribute_representation = attribute_embeddings[attribute_id]
-
+# Define the function to update user representation
 def update_user_representation(eu, eu_plus, eu_minus, W3, W4, b):
     C_u_minus = sigmoid(np.dot(W3, np.concatenate((eu_minus, eu, eu_minus * eu))) + b)
     C_u_plus = sigmoid(np.dot(W4, np.concatenate((eu_plus, eu, eu_plus * eu))) + b)
     eu_prime = eu * (C_u_minus - C_u_plus)
     return eu_prime
 
+# Define the function to update item representation
 def update_item_representation(ea_plus, ei_minus, W5, b):
     C_i_minus = sigmoid(np.dot(W5, np.concatenate((ea_plus, ei_minus, ea_plus * ei_minus))) + b)
     ei_minus_prime = ei_minus * C_i_minus
     return ei_minus_prime
 
+# Define the function to calculate overall preference representation
 def calculate_overall_preference(eu_prime, ei_minus_prime):
     e_overall = eu_prime - ei_minus_prime
     return e_overall
 
+# Define the sigmoid function
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
@@ -207,6 +185,7 @@ def compute_ranking_score(user_embedding, embedding):
 def compute_preference_scores(embeddings, overall_embedding):
     return np.dot(embeddings, overall_embedding)
 
+# Training code for the model
 def train_model(training_samples, model, omega):
     # BPR loss minimization
     loss = -np.sum(np.log(sigmoid(epsilon))) + omega * np.linalg.norm(model)**2
@@ -215,7 +194,7 @@ def train_model(training_samples, model, omega):
     
     return trained_model
 
-# Algorithm execution
+# Define the CECR algorithm
 def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
     # Initialize embeddings, parameters, and training samples
     
@@ -236,4 +215,29 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
         recommended_item_or_attribute = recommend_item_or_attribute(user_embedding, overall_embedding,
                                                                     item_embeddings, attribute_embeddings, K)
         
-        # Ask for further feedback or terminate conversation based on recommended_item_or_attribute
+        # Ask for further feedback or terminate the conversation based on recommended_item_or_attribute
+
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description="CECR Algorithm")
+parser.add_argument("--K", type=int, default=5, help="Number of recommendations (K)")
+parser.add_argument("--epsilon", type=float, default=0.1, help="Epsilon value")
+parser.add_argument("--gamma", type=float, default=0.01, help="Gamma value")
+parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate")
+parser.add_argument("--lambda_val", type=float, default=0.1, help="Lambda value")
+parser.add_argument("--omega", type=float, default=0.01, help="Omega value")
+
+args = parser.parse_args()
+
+# Execute your algorithm with appropriate parameters
+if __name__ == "__main__":
+    K = args.K
+    epsilon = args.epsilon
+    gamma = args.gamma
+    learning_rate = args.learning_rate
+    lambda_val = args.lambda_val
+    omega = args.omega
+
+    CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega)
+
+
+# python cecr_algorithm.py --K 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01

@@ -1,5 +1,7 @@
 import random
 
+# This file shows how to use UserSimulator
+
 # User Simulator
 class UserSimulator:
     def __init__(self, items, attributes):

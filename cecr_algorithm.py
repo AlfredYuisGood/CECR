@@ -217,20 +217,32 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
     model = train_model(training_samples, g, omega)
     
     while True:
-        # Receive user feedback on item or attribute during the conversation
-        
-        # Counterfactual Explanation Generation
-        delta = generate_counterfactual_explanation(user_embedding, item_embedding, attributes,
-                                                   epsilon, gamma, learning_rate, lambda_val)
-        
-        # Augmenting Recommendation via Counterfactual Samples
-        model = augment_recommendation_model(training_samples, delta, model, omega)
-        
-        # Recommendation
-        recommended_item_or_attribute = recommend_item_or_attribute(user_embedding, overall_embedding,
-                                                                    item_embeddings, attribute_embeddings, K)
-        
-        # Ask for further feedback or terminate the conversation based on recommended_item_or_attribute
+    # Receive user feedback on item or attribute during the conversation
+    # This is a placeholder for your actual user interaction logic
+    user_feedback = input("Please provide feedback or type 'quit' to end the conversation: ")
+    
+    if user_feedback.lower() == 'quit':
+        # Terminate the conversation if the user types 'quit'
+        break
+    
+    # Counterfactual Explanation Generation
+    delta = generate_counterfactual_explanation(user_embedding, item_embedding, attributes,
+                                               epsilon, gamma, learning_rate, lambda_val)
+    
+    # Augmenting Recommendation via Counterfactual Samples
+    model = augment_recommendation_model(training_samples, delta, model, omega)
+    
+    # Recommendation
+    recommended_item_or_attribute = recommend_item_or_attribute(user_embedding, overall_embedding,
+                                                                item_embeddings, attribute_embeddings, K)
+    
+    print("Recommended item or attribute:", recommended_item_or_attribute)
+    
+    # Ask for further feedback or terminate the conversation based on user input
+    user_input = input("Do you want more recommendations? (Type 'yes' or 'quit'): ")
+    if user_input.lower() == 'quit':
+        break
+
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="CECR Algorithm")

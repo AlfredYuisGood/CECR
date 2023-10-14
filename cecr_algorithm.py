@@ -1,4 +1,4 @@
-mport argparse
+import argparse
 import numpy as np
 import random
 import torch
@@ -29,14 +29,29 @@ def retrieve_item_embeddings(item_id, gnn_model):
     item_embedding = gnn_model(graph_data, edge_index)
     return item_embedding
 
-def retrieve_user_embeddings(user_id, gnn_model):
+def retrieve_user_embeddings(user_id, gnn_model, user_item_interactions, user_social_connections):
     # Implementation of user embedding retrieval using GNN
-    # Similar to item embeddings, use your graph data and GNN model here.
+    # Use your graph data and GNN model here to consider user-item interactions and social connections.
     # Replace the random data and edge_index with your actual data.
-    graph_data = torch.randn(user_id.shape[0], input_dim)
-    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long)  # Replace with your actual edge_index
-    user_embedding = gnn_model(graph_data, edge_index)
-    return user_embedding
+    
+    # Retrieve item embeddings for user-item interactions
+    item_embeddings = []
+    for item_id in user_item_interactions[user_id]:
+        item_emb = retrieve_item_embeddings(item_id, gnn_model)
+        item_embeddings.append(item_emb)
+    item_embeddings = torch.stack(item_embeddings, dim=0)
+    
+    # Retrieve user embeddings for social connections
+    user_embeddings = []
+    for friend_id in user_social_connections[user_id]:
+        friend_emb = retrieve_user_embeddings(friend_id, gnn_model, user_item_interactions, user_social_connections)
+        user_embeddings.append(friend_emb)
+    user_embeddings = torch.stack(user_embeddings, dim=0)
+    
+    # Combine item and user embeddings to form the user representation
+    user_representation = torch.cat((item_embeddings.mean(dim=0), user_embeddings.mean(dim=0)))
+    
+    return user_representation
 
 def retrieve_attribute_embeddings(attribute_id, gnn_model):
     # Implementation of attribute embedding retrieval using GNN
@@ -109,9 +124,9 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 # Initialize user representation eu, positive attribute representation ea_plus, negative attribute representation ea_minus
-eu = retrieve_user_embeddings(user_id, gnn_model)
-ea_plus = retrieve_attribute_embeddings(attribute_id, gnn_model)
-ea_minus = retrieve_attribute_embeddings(attribute_id, gnn_model)
+eu = np.zeros((representation_size,))
+ea_plus = np.zeros((representation_size,))
+ea_minus = np.zeros((representation_size,))
 
 # Update user representation eu_prime
 eu_prime = update_user_representation(eu, ea_plus, ea_minus, W3, W4, b)
@@ -216,29 +231,10 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
                                                                     item_embeddings, attribute_embeddings, K)
         
         # Ask for further feedback or terminate the conversation based on recommended_item_or_attribute
-        
-        # Update user representation eu_prime
-        eu_prime = update_user_representation(eu, ea_plus, ea_minus, W3, W4, b)
-
-        # Update item representation ei_minus
-        ei_minus = initialize_item_embeddings()
-
-        # Update overall preference representation e_overall
-        e_overall = calculate_overall_preference(eu_prime, ei_minus)
-
-        # Increment round number
-        round_number += 1
-        
-        # Check for conversation termination based on round number
-        
-        if round_number > max_rounds:
-            break
-
-    # Return accepted top-K items or conversation ending signal
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description="CECR Algorithm")
-parser.add_argument("--K", type=int, default=5, help="Number of recommendations (K)")
+parser.add_argument("--K_values", nargs='+', type=int, default=[5], help="List of recommendation values (K)")
 parser.add_argument("--epsilon", type=float, default=0.1, help="Epsilon value")
 parser.add_argument("--gamma", type=float, default=0.01, help="Gamma value")
 parser.add_argument("--learning_rate", type=float, default=0.001, help="Learning rate")
@@ -247,15 +243,16 @@ parser.add_argument("--omega", type=float, default=0.01, help="Omega value")
 
 args = parser.parse_args()
 
-# Execute your algorithm with appropriate parameters
 if __name__ == "__main__":
-    K = args.K
+    K_values = args.K_values
     epsilon = args.epsilon
     gamma = args.gamma
     learning_rate = args.learning_rate
     lambda_val = args.lambda_val
     omega = args.omega
-    
-    CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega)
+
+    for K in K_values:
+        CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega)
+
 
 # python cecr_algorithm.py --K 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01

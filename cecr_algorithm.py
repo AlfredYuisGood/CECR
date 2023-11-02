@@ -6,6 +6,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 
+# Define your data dimensions and other relevant parameters here
+input_dim = 128  # Example input dimension, replace with your actual value
+num_items = 3
+num_attributes = 3
+item_dim = 128
+attribute_dim = 128
+user_dim = 128
+overall_dim = 128
+
+# Set the device to GPU if available, otherwise use CPU
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 # Define your GNN model class (Part 1)
 class GNNModel(nn.Module):
     def __init__(self, input_dim, hidden_dim):
@@ -22,17 +34,15 @@ class GNNModel(nn.Module):
 # Modify your retrieval functions to use GNN (Part 1)
 def retrieve_item_embeddings(item_id, gnn_model):
     # Implementation of item embedding retrieval using GNN
-    # You will need to provide your graph data and convert it to PyTorch tensors
-    # For simplicity, I'm using random data here as an example.
-    graph_data = torch.randn(item_id.shape[0], input_dim).cuda()  # Replace with your actual graph data
-    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long).cuda()  # Replace with your actual edge_index
+    # Replace with your actual graph data and edge_index
+    graph_data = torch.randn(item_id.shape[0], input_dim).to(device)  # Replace with your actual graph data
+    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long).to(device)  # Replace with your actual edge_index
     item_embedding = gnn_model(graph_data, edge_index)
     return item_embedding
 
 def retrieve_user_embeddings(user_id, gnn_model, user_item_interactions, user_social_connections):
     # Implementation of user embedding retrieval using GNN
-    # Use your graph data and GNN model here to consider user-item interactions and social connections.
-    # Replace the random data and edge_index with your actual data.
+    # Replace the random data and edge_index with your actual data
     
     # Retrieve item embeddings for user-item interactions
     item_embeddings = []
@@ -55,10 +65,9 @@ def retrieve_user_embeddings(user_id, gnn_model, user_item_interactions, user_so
 
 def retrieve_attribute_embeddings(attribute_id, gnn_model):
     # Implementation of attribute embedding retrieval using GNN
-    # Similar to item and user embeddings, use your graph data and GNN model here.
-    # Replace the random data and edge_index with your actual data.
-    graph_data = torch.randn(attribute_id.shape[0], input_dim).cuda()  # Replace with your actual graph data
-    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long).cuda()  # Replace with your actual edge_index
+    # Replace with your actual graph data and edge_index
+    graph_data = torch.randn(attribute_id.shape[0], input_dim).to(device)  # Replace with your actual graph data
+    edge_index = torch.tensor([[0, 1, 2], [1, 0, 3]], dtype=torch.long).to(device)  # Replace with your actual edge_index
     attribute_embedding = gnn_model(graph_data, edge_index)
     return attribute_embedding
 
@@ -80,23 +89,18 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
             break
         
         # Counterfactual Explanation Generation
-        delta = generate_counterfactual_explanation(user_embedding, item_embedding, attributes,
-                                                   epsilon, gamma, learning_rate, lambda_val)
+        delta = generate_counterfactual_explanation(user_embedding, item_embedding, epsilon, gamma, learning_rate, lambda_val)
         
         # Augmenting Recommendation via Counterfactual Samples
         model = augment_recommendation_model(training_samples, delta, model, omega)
         
-        # Recommendation
-        recommended_item_or_attribute = recommend_item_or_attribute(user_embedding, overall_embedding,
-                                                                    item_embeddings, attribute_embeddings, K)
-        
-        print("Recommended item or attribute:", recommended_item_or_attribute)
+        # Recommendation logic
+        # Implement your recommendation logic here
         
         # Ask for further feedback or terminate the conversation based on user input
         user_input = input("Do you want more recommendations? (Type 'yes' or 'quit'): ")
         if user_input.lower() == 'quit':
             break
-
 
 # User Simulator (Part 2)
 class UserSimulator:
@@ -113,21 +117,13 @@ class UserSimulator:
         self.user_profile = {}
 
     def get_simulated_feedback(self, system_question):
-        # Extract user, item, and attribute representations from the user profile
-        user_representation = self.user_profile["user_representation"]
-        item_embedding = self.user_profile["item_embedding"]
-        attribute_embedding = self.user_profile["attribute_embedding"]
-
-        # Implement user feedback based on the system's question
         feedback = {}
         
         for question in system_question:
             if "attribute" in question.lower():
-                # Simulate user's response to attributes
                 attribute = random.choice(self.attributes)
                 feedback[question] = attribute
             else:
-                # Simulate user's reaction to recommended items (like or dislike)
                 for item in self.items:
                     feedback[item] = random.choice(["like", "dislike"])
         
@@ -135,20 +131,16 @@ class UserSimulator:
 
 # Recommendation System (Part 2)
 class RecommendationSystem:
-    def get_recommendations(self, user_profile):
-        # Extract user, item, and attribute representations from the user profile
-        user_representation = user_profile["user_representation"]
-        item_embedding = user_profile["item_embedding"]
-        attribute_embedding = user_profile["attribute_embedding"]
+    def __init__(self, user_embedding, overall_embedding, item_embeddings, attribute_embeddings):
+        self.user_embedding = user_embedding
+        self.overall_embedding = overall_embedding
+        self.item_embeddings = item_embeddings
+        self.attribute_embeddings = attribute_embeddings
         
-        # Implement your recommendation algorithm here using the provided embeddings
-        # Return a list of recommended items
-        # You can use the embeddings directly in your recommendation logic
-        
-        # For example, let's generate random recommendations for demonstration purposes
+    def get_recommendations(self, K):
         num_recommendations = 3
-        recommended_indices = random.sample(range(len(item_embedding)), num_recommendations)
-        recommended_items = [item_embedding[i] for i in recommended_indices]
+        recommended_indices = random.sample(range(len(self.item_embeddings)), num_recommendations)
+        recommended_items = [self.item_embeddings[i] for i in recommended_indices]
         
         return recommended_items
 
@@ -157,44 +149,23 @@ def simulate_conversation(user_simulator, recommendation_system):
     print("Welcome to the Conversational Recommendation System!")
     
     while True:
-        # Reset the user profile at the beginning of the conversation
         user_simulator.reset_user_profile()
         
-        # Start a conversation loop
-        for _ in range(3):  # Simulate a conversation with 3 rounds
-            # Assume the system asks a question about attributes
+        for _ in range(3):
             system_question = ["What do you think about attribute X?", "How do you feel about attribute Y?"]
             
-            # Simulate user's response
             user_feedback = user_simulator.get_simulated_feedback(system_question)
             
-            # Get recommendations from the system
-            recommended_items = recommendation_system.get_recommendations(user_simulator.user_profile)
+            recommended_items = recommendation_system.get_recommendations(K)
             
             print("System: We recommend the following items:")
             for idx, item in enumerate(recommended_items, start=1):
                 print(f"{idx}. {item}")
             
-            # Simulate the next round of the conversation
-            # ...
-        
-        # Ask the user if they want to continue the conversation
-        user_input = input("System: Do you want to continue the conversation? (yes/no): ").strip().lower()
-        if user_input != "yes":
-            print("System: Conversation ended. Thank you!")
-            break
-
-# Sample item, user, and attribute representations (replace with actual representations)
-# Initialize these as PyTorch tensors on the GPU
-item_embedding = torch.randn(3, 128).cuda()  # Example: 3 items, each represented by a 128-dimensional vector
-user_representation = torch.randn(1, 128).cuda()  # Example: 1 user representation
-attribute_embedding = torch.randn(3, 128).cuda()  # Example: 3 attributes, each represented by a 128-dimensional vector
-
-# Define your item, user, and attribute representations and move them to GPU
-# Replace the above random tensors with your actual data
-
-items = ["item1", "item2", "item3"]
-attributes = ["attribute1", "attribute2", "attribute3"]
+            user_input = input("System: Do you want to continue the conversation? (yes/no): ").strip().lower()
+            if user_input != "yes":
+                print("System: Conversation ended. Thank you!")
+                break
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="CECR Algorithm and Conversation")
@@ -207,17 +178,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    K_values = args.K_values
-    epsilon = args.epsilon
-    gamma = args.gamma
-    learning_rate = args.learning_rate
-    lambda_val = args.lambda_val
-    omega = args.omega
+    for K in args.K_values:
+        CECR_algorithm(K, args.epsilon, args.gamma, args.learning_rate, args.lambda_val, args.omega)
 
-    for K in K_values:
-        CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega)
 
-    user_simulator = UserSimulator(items, attributes, user_representation, item_embedding, attribute_embedding)
-    recommendation_system = RecommendationSystem()  # Initialize your recommendation system here
+# python your_script.py --K_values 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01
 
-    simulate_conversation(user_simulator, recommendation_system)

@@ -183,6 +183,7 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
             break
 
 # User Simulator (Part 2)
+# You may find other user simulator online, here just demo how to use user simulator
 class UserSimulator:
     def __init__(self, items, attributes, user_representation, item_embedding, attribute_embedding):
         self.items = items

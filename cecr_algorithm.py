@@ -80,7 +80,7 @@ def recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddin
     if torch.max(item_scores) > torch.max(attribute_scores):
         # Recommend top K items
         _, top_item_indices = torch.topk(item_scores, k=K)
-        recommended_items = [items[idx] for idx in top_item_indices]
+        recommended_items = [f"Item {idx}" for idx in top_item_indices]
         return recommended_items
     else:
         # Ask for an attribute
@@ -128,7 +128,6 @@ def train_model(training_samples, model, optimizer, num_epochs, omega):
     # Return the trained model
     return model
 
-
 # Define the augment_recommendation_model function (Part 1)
 def augment_recommendation_model(training_samples, delta, model, omega):
     # Augment the recommendation model with counterfactual samples
@@ -166,8 +165,8 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
         model = augment_recommendation_model(training_samples, delta, model, omega)
         
         # Train the model with augmented data and delta parameter
-        model = train_model(training_samples, model, optimizer, num_epochs, omega, delta)
-
+        model = train_model(training_samples, model, optimizer, num_epochs, omega)
+        
         # Recommendation logic
         recommended_items = recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddings, attribute_embeddings, K)
         
@@ -223,21 +222,21 @@ class RecommendationSystem:
         attribute_scores = torch.matmul(self.attribute_embeddings, self.overall_embedding)
         
         top_item_indices = torch.topk(item_scores, k=K).indices
-        recommended_items = [items[idx] for idx in top_item_indices]
+        recommended_items = [f"Item {idx}" for idx in top_item_indices]
         
         return recommended_items
 
 # Conversation Simulation (Part 2)
-def simulate_conversation(user_simulator, recommendation_system):
+def simulate_conversation(UserSimulator, recommendation_system, K):
     print("Welcome to the Conversational Recommendation System!")
     
     while True:
-        user_simulator.reset_user_profile()
+        UserSimulator.reset_user_profile()
         
         for _ in range(3):
             system_question = ["What do you think about attribute X?", "How do you feel about attribute Y?"]
             
-            user_feedback = user_simulator.get_simulated_feedback(system_question)
+            user_feedback = UserSimulator.get_simulated_feedback(system_question)
             
             recommended_items = recommendation_system.get_recommendations(K)
             
@@ -263,6 +262,7 @@ if __name__ == "__main__":
 
     for K in args.K_values:
         CECR_algorithm(K, args.epsilon, args.gamma, args.learning_rate, args.lambda_val, args.omega)
+
 
 
 

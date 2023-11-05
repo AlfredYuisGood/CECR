@@ -86,8 +86,11 @@ def recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddin
         # Ask for an attribute
         return None  # Placeholder for attribute recommendation
 
+# Define your optimizer and learning rate
+optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
 # Training code for the model (Part 1)
-def train_model(training_samples, model, omega):
+def train_model(training_samples, model, optimizer, num_epochs, omega):
     # BPR loss minimization
     loss_function = nn.BCEWithLogitsLoss()  # Binary Cross-Entropy Loss for BPR
 
@@ -125,6 +128,19 @@ def train_model(training_samples, model, omega):
     # Return the trained model
     return model
 
+
+# Define the augment_recommendation_model function (Part 1)
+def augment_recommendation_model(training_samples, delta, model, omega):
+    # Augment the recommendation model with counterfactual samples
+    
+    # Assuming delta is a dictionary containing updates to the model's parameters
+    for param_name, param_value in delta.items():
+        if param_name in model.state_dict():
+            # Update the model's parameters with delta
+            model.state_dict()[param_name] += omega * param_value
+    
+    return model
+
 # Define the CECR algorithm (Part 2)
 def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
     # Initialize embeddings, parameters, and training samples
@@ -149,6 +165,9 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
         # Augmenting Recommendation via Counterfactual Samples
         model = augment_recommendation_model(training_samples, delta, model, omega)
         
+        # Train the model with augmented data and delta parameter
+        model = train_model(training_samples, model, optimizer, num_epochs, omega, delta)
+
         # Recommendation logic
         recommended_items = recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddings, attribute_embeddings, K)
         
@@ -244,6 +263,7 @@ if __name__ == "__main__":
 
     for K in args.K_values:
         CECR_algorithm(K, args.epsilon, args.gamma, args.learning_rate, args.lambda_val, args.omega)
+
 
 
 # python cecr_algorithm.py --K_values 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01

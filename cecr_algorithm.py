@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+import torch.optim as optim
 
 # Define your data dimensions and other relevant parameters here
 input_dim = 128  # Example input dimension, replace with your actual value
@@ -71,13 +72,67 @@ def retrieve_attribute_embeddings(attribute_id, gnn_model):
     attribute_embedding = gnn_model(graph_data, edge_index)
     return attribute_embedding
 
-# Define the CECR algorithm (Part 1)
+# Define the recommendation logic (Part 1)
+def recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddings, attribute_embeddings, K=5):
+    item_scores = compute_preference_scores(item_embeddings, overall_embedding)
+    attribute_scores = compute_preference_scores(attribute_embeddings, overall_embedding)
+    
+    if torch.max(item_scores) > torch.max(attribute_scores):
+        # Recommend top K items
+        _, top_item_indices = torch.topk(item_scores, k=K)
+        recommended_items = [items[idx] for idx in top_item_indices]
+        return recommended_items
+    else:
+        # Ask for an attribute
+        return None  # Placeholder for attribute recommendation
+
+# Training code for the model (Part 1)
+def train_model(training_samples, model, omega):
+    # BPR loss minimization
+    loss_function = nn.BCEWithLogitsLoss()  # Binary Cross-Entropy Loss for BPR
+
+    # Set the model in training mode
+    model.train()
+
+    for epoch in range(num_epochs):
+        total_loss = 0.0
+        for batch_samples in training_samples:  # You may need to create batches depending on your data size
+            user_id, positive_item_id, negative_item_id = batch_samples
+
+            # Retrieve embeddings
+            user_embedding = retrieve_user_embeddings(user_id, gnn_model, user_item_interactions, user_social_connections)
+            positive_item_embedding = retrieve_item_embeddings(positive_item_id, gnn_model)
+            negative_item_embedding = retrieve_item_embeddings(negative_item_id, gnn_model)
+
+            # Calculate preference scores
+            positive_score = torch.matmul(positive_item_embedding, overall_embedding)
+            negative_score = torch.matmul(negative_item_embedding, overall_embedding)
+
+            # Compute BPR loss
+            loss = -torch.log(torch.sigmoid(positive_score - negative_score))
+            
+            # Zero gradients, backward pass, and optimization step
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        # Print the average loss for this epoch
+        avg_loss = total_loss / len(training_samples)
+        print(f"Epoch [{epoch + 1}/{num_epochs}] - Loss: {avg_loss:.4f}")
+
+    # Return the trained model
+    return model
+
+# Define the CECR algorithm (Part 2)
 def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
     # Initialize embeddings, parameters, and training samples
-    # ...
-
-    # Training Phase 1: Train the model using the original dataset
-    model = train_model(training_samples, g, omega)
+    # Replace with your actual data and initialization logic
+    user_embedding = torch.randn(user_dim).to(device)
+    overall_embedding = torch.randn(overall_dim).to(device)
+    item_embeddings = torch.randn(num_items, item_dim).to(device)
+    attribute_embeddings = torch.randn(num_attributes, attribute_dim).to(device)
     
     while True:
         # Receive user feedback on item or attribute during the conversation
@@ -95,7 +150,14 @@ def CECR_algorithm(K, epsilon, gamma, learning_rate, lambda_val, omega):
         model = augment_recommendation_model(training_samples, delta, model, omega)
         
         # Recommendation logic
-        # Implement your recommendation logic here
+        recommended_items = recommend_item_or_attribute(user_embedding, overall_embedding, item_embeddings, attribute_embeddings, K)
+        
+        if recommended_items is not None:
+            print("System: We recommend the following items:")
+            for idx, item in enumerate(recommended_items, start=1):
+                print(f"{idx}. {item}")
+        else:
+            print("System: Please provide feedback on attributes.")
         
         # Ask for further feedback or terminate the conversation based on user input
         user_input = input("Do you want more recommendations? (Type 'yes' or 'quit'): ")
@@ -138,9 +200,11 @@ class RecommendationSystem:
         self.attribute_embeddings = attribute_embeddings
         
     def get_recommendations(self, K):
-        num_recommendations = 3
-        recommended_indices = random.sample(range(len(self.item_embeddings)), num_recommendations)
-        recommended_items = [self.item_embeddings[i] for i in recommended_indices]
+        item_scores = torch.matmul(self.item_embeddings, self.overall_embedding)
+        attribute_scores = torch.matmul(self.attribute_embeddings, self.overall_embedding)
+        
+        top_item_indices = torch.topk(item_scores, k=K).indices
+        recommended_items = [items[idx] for idx in top_item_indices]
         
         return recommended_items
 
@@ -182,5 +246,4 @@ if __name__ == "__main__":
         CECR_algorithm(K, args.epsilon, args.gamma, args.learning_rate, args.lambda_val, args.omega)
 
 
-# python your_script.py --K_values 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01
-
+# python cecr_algorithm.py --K_values 5 --epsilon 0.1 --gamma 0.01 --learning_rate 0.001 --lambda_val 0.1 --omega 0.01
